@@ -1,0 +1,36 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="200" height="200" viewBox="0 0 200 200">
+  <!-- Row 1 -->
+  <rect x="0" y="0" width="40" height="40" fill="#FF5733" />
+  <rect x="40" y="0" width="40" height="40" fill="#33FF57" />
+  <rect x="80" y="0" width="40" height="40" fill="#3357FF" />
+  <rect x="120" y="0" width="40" height="40" fill="#F1C40F" />
+  <rect x="160" y="0" width="40" height="40" fill="#8E44AD" />
+
+  <!-- Row 2 -->
+  <rect x="0" y="40" width="40" height="40" fill="#1ABC9C" />
+  <rect x="40" y="40" width="40" height="40" fill="#E74C3C" />
+  <rect x="80" y="40" width="40" height="40" fill="#3498DB" />
+  <rect x="120" y="40" width="40" height="40" fill="#9B59B6" />
+  <rect x="160" y="40" width="40" height="40" fill="#F39C12" />
+
+  <!-- Row 3 -->
+  <rect x="0" y="80" width="40" height="40" fill="#34495E" />
+  <rect x="40" y="80" width="40" height="40" fill="#2ECC71" />
+  <rect x="80" y="80" width="40" height="40" fill="#E67E22" />
+  <rect x="120" y="80" width="40" height="40" fill="#9A7D0A" />
+  <rect x="160" y="80" width="40" height="40" fill="#7D3C98" />
+
+  <!-- Row 4 -->
+  <rect x="0" y="120" width="40" height="40" fill="#2980B9" />
+  <rect x="40" y="120" width="40" height="40" fill="#1ABC9C" />
+  <rect x="80" y="120" width="40" height="40" fill="#8E44AD" />
+  <rect x="120" y="120" width="40" height="40" fill="#2ECC71" />
+  <rect x="160" y="120" width="40" height="40" fill="#F1C40F" />
+
+  <!-- Row 5 -->
+  <rect x="0" y="160" width="40" height="40" fill="#C0392B" />
+  <rect x="40" y="160" width="40" height="40" fill="#16A085" />
+  <rect x="80" y="160" width="40" height="40" fill="#D35400" />
+  <rect x="120" y="160" width="40" height="40" fill="#27AE60" />
+  <rect x="160" y="160" width="40" height="40" fill="#34495E" />
+</svg>
