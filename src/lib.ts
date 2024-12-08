@@ -5,7 +5,7 @@ export interface CalculationResult {
 
 export const parseInputString = (input: string) => {
   const regexes: { [key: string]: RegExp[] } = {
-    fileSize: [/^\d+(?:\.\d+)?(?:B|KB|MB|GB|TB)$/],
+    fileSize: [/^(\d+(\.\d+)?)([TGMK]?i?B)$/i],
     duration: [
       /^\d+(?:\.\d+)?[hms]$/,
       /^\d+:\d+:\d+$/,
@@ -43,6 +43,31 @@ export const parseInputString = (input: string) => {
   return { parsed, unknownTokens };
 };
 
+// Parse duration string into seconds
+export const parseDuration = (duration: string): number | null => {
+  if (duration === "") return null;
+
+  // Handle "nn:nn:nn" and "nn:nn" formats
+  if (duration.includes(":")) {
+    const parts = duration.split(":").map(Number);
+    if (parts.length === 2) {
+      return parts[0] * 60 + parts[1];
+    } else if (parts.length === 3) {
+      return parts[0] * 3600 + parts[1] * 60 + parts[2];
+    } else {
+      return null;
+    }
+  }
+
+  // Handle "1h30m", "90m", "5400s" formats
+  const hmsRegex = /^(\d+h)?(\d+m)?(\d+s)?$/i;
+  const match = duration.match(hmsRegex);
+  if (!match) return null;
+
+  const [_, hours, minutes, seconds] = match.map((x) => parseInt(x || "0", 10));
+  return (hours || 0) * 3600 + (minutes || 0) * 60 + (seconds || 0);
+};
+
 export const parseInput = (input: string): CalculationResult | string => {
   // inputs are split into groups of numbers and units
   // each input is separated by a space
@@ -69,9 +94,15 @@ export const parseInput = (input: string): CalculationResult | string => {
     const missingKeys = requiredKeys.filter((key) => !(key in parsed));
 
     // must only be one missing key
+    if (missingKeys.length === 0) {
+      // user provided all values, nothing to calculate
+      throw new Error("All values were provided. Nothing to calculate.");
+    }
+
     if (missingKeys.length !== 1) {
+      // user provided more than one missing value
       throw new Error(
-        "Invalid input. Provide at least two parameters to calculate the missing value."
+        "Provide only two parameters to calculate the missing value."
       );
     }
 
@@ -136,36 +167,15 @@ export const parseInput = (input: string): CalculationResult | string => {
   }
 };
 
-const parseDuration = (duration: string): number | null => {
-  // Handle "nn:nn:nn" and "nn:nn" formats
-  if (duration.includes(":")) {
-    const parts = duration.split(":").map(Number);
-    if (parts.length === 2) {
-      return parts[0] * 60 + parts[1];
-    } else if (parts.length === 3) {
-      return parts[0] * 3600 + parts[1] * 60 + parts[2];
-    } else {
-      return null;
-    }
-  }
-
-  // Handle "1h30m", "90m", "5400s" formats
-  const hmsRegex = /(\d+h)?(\d+m)?(\d+s)?/i;
-  const match = duration.match(hmsRegex);
-  if (!match) return null;
-
-  const [_, hours, minutes, seconds] = match.map((x) => parseInt(x || "0", 10));
-  return (hours || 0) * 3600 + (minutes || 0) * 60 + (seconds || 0);
-};
-
-const calculateBitRate = (
+export const calculateBitRate = (
   fileSize: string,
   duration: number,
   resolution?: string,
   frameRate?: string
 ): string => {
-  const sizeInBits = parseFileSize(fileSize) * 8;
-  const bitRate = sizeInBits / duration;
+  const bytes = parseFileSize(fileSize);
+  const bitRate = (bytes * 8) / duration;
+  // console.log("bytes", bytes, "duration", duration, "bitRate", bitRate);
 
   let bitsPerPixel = 0;
   if (resolution && frameRate) {
@@ -176,6 +186,8 @@ const calculateBitRate = (
   }
 
   let result = "";
+
+  // bit rates typically always use decimal multiples
   if (bitRate >= 1e6) {
     result = `${(bitRate / 1e6).toPrecision(3)} Mbps`;
   } else if (bitRate >= 1e3) {
@@ -196,15 +208,24 @@ const calculateFileSize = (
   frameRate?: string
 ): string => {
   const rateInBits = parseBitRate(bitRate);
-  let fileSize = rateInBits * duration;
+  const fileSize = (rateInBits * duration) / 8;
 
-  if (resolution && frameRate) {
-    const [width, height] = resolution.split("x").map(Number);
-    const fps = parseInt(frameRate.replace("fps", ""), 10);
-    const pixelsPerSecond = width * height * fps;
-    const bitsPerPixel = rateInBits / pixelsPerSecond;
-    fileSize = bitsPerPixel * pixelsPerSecond * duration;
-  }
+  // if (resolution && frameRate) {
+  //   const [width, height] = resolution.split("x").map(Number);
+  //   const fps = parseInt(frameRate.replace("fps", ""), 10);
+  //   const pixelsPerSecond = width * height * fps;
+  //   const bitsPerPixel = rateInBits / pixelsPerSecond;
+  //   fileSize = bitsPerPixel * pixelsPerSecond * duration;
+  // }
+
+  console.log(
+    "bitRate",
+    rateInBits,
+    "duration",
+    duration,
+    "fileSize",
+    fileSize
+  );
 
   // return file size string in M, kB, MB, GB, TB
   if (fileSize < 1e3) {
@@ -236,26 +257,35 @@ const calculateDuration = (
     const pixelsPerSecond = width * height * fps;
     const bitsPerPixel = rateInBits / pixelsPerSecond;
 
-    // don't with this for now
+    // don't do anything with this for now
   }
 
   // return duration in format "hh:mm:ss"
   if (duration >= 3600) {
     const hours = Math.floor(duration / 3600);
-    const minutes = Math.floor((duration % 3600) / 60);
-    const seconds = Math.floor(duration % 60);
+    const minutes = Math.floor((duration % 3600) / 60)
+      .toString()
+      .padStart(2, "0");
+    const seconds = Math.floor(duration % 60)
+      .toString()
+      .padStart(2, "0");
     return `(hh:mm:ss): ${hours}:${minutes}:${seconds}`;
   } else if (duration >= 60) {
-    const minutes = Math.floor(duration / 60);
-    const seconds = Math.floor(duration % 60);
+    const minutes = Math.floor(duration / 60)
+      .toString()
+      .padStart(2, "0");
+    const seconds = Math.floor(duration % 60)
+      .toString()
+      .padStart(2, "0");
     return `(mm:ss): ${minutes}:${seconds}`;
   } else {
     return `(s): ${duration}`;
   }
 };
 
-const parseFileSize = (fileSize: string): number => {
-  const sizeRegex = /(\d+(\.\d+)?)([TGMK]?B?)/i;
+// Parse file size string into bytes
+export const parseFileSize = (fileSize: string): number => {
+  const sizeRegex = /^(\d+(\.\d+)?)([TGMK]?i?B)$/i;
   const match = fileSize.match(sizeRegex);
   if (!match) throw new Error("Invalid file size format.");
 
@@ -264,7 +294,15 @@ const parseFileSize = (fileSize: string): number => {
   const unitLower = unit.toUpperCase();
 
   const multiplier =
-    unitLower === "TB"
+    unitLower === "TIB"
+      ? 2 ** 40
+      : unitLower === "GIB"
+      ? 2 ** 30
+      : unitLower === "MIB"
+      ? 2 ** 20
+      : unitLower === "KIB"
+      ? 2 ** 10
+      : unitLower === "TB"
       ? 1e12
       : unitLower === "GB"
       ? 1e9
@@ -272,15 +310,17 @@ const parseFileSize = (fileSize: string): number => {
       ? 1e6
       : unitLower === "KB"
       ? 1e3
+      : unitLower === "B" || unitLower === ""
+      ? 1
       : 1;
 
   return sizeInBytes * multiplier;
 };
 
-const parseBitRate = (bitRate: string): number => {
+export const parseBitRate = (bitRate: string): number => {
   const rateRegex = /^(\d+(?:\.\d+)?)(bps|kbps|Mbps|Gbps|k|M|G)$/;
   const match = bitRate.match(rateRegex);
-  if (!match) throw new Error("Invalid bit rate format.");
+  if (!match) throw new Error("Unsupported bit rate unit.");
 
   const value = parseFloat(match[1]);
   const unit = match[2].toLowerCase();
