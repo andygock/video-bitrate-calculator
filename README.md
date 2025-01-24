@@ -1,1 +1,0 @@
-# Video Bit Rate Calculator
