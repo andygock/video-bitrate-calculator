@@ -3,6 +3,17 @@ import { parseInput, CalculationResult, help } from "./lib";
 import "./App.css";
 
 const storageKey = "calculationHistory";
+const maxHistoryItems = 100;
+
+function moveCursorToEnd(inputElement: HTMLInputElement | null) {
+  if (inputElement && inputElement.value) {
+    const length = inputElement.value.length;
+    setTimeout(() => {
+      inputElement.focus(); // Ensure the element is focused
+      inputElement.setSelectionRange(length, length); // Set cursor to the end
+    }, 0);
+  }
+}
 
 const App: React.FC = () => {
   const [history, setHistory] = useState<CalculationResult[]>(() => {
@@ -12,6 +23,7 @@ const App: React.FC = () => {
   const [input, setInput] = useState("");
   const [historyIndex, setHistoryIndex] = useState<number | null>(null);
   const inputRef = useRef<HTMLInputElement>(null);
+  const historyUpdated = useRef(false);
 
   useEffect(() => {
     if (inputRef.current) {
@@ -19,9 +31,30 @@ const App: React.FC = () => {
     }
   }, []);
 
+  // useEffect(() => {
+  //   if (historyUpdated.current) {
+  //     moveCursorToEnd(inputRef.current);
+  //     historyUpdated.current = false;
+  //   }
+  // }, [input, historyIndex]);
+
   useEffect(() => {
     localStorage.setItem(storageKey, JSON.stringify(history));
   }, [history]);
+
+  const purgeOldHistory = () => {
+    if (history.length > maxHistoryItems) {
+      setHistory(history.slice(history.length - maxHistoryItems));
+
+      // make sure history index is still valid and wasn't pointing to a removed item
+      if (historyIndex !== null && historyIndex < history.length - 1) {
+        setHistoryIndex(historyIndex);
+      } else if (historyIndex !== null && historyIndex >= history.length) {
+        // if the last item was removed, reset the index
+        setHistoryIndex(null);
+      }
+    }
+  };
 
   const handleInputSubmit = (e: React.FormEvent) => {
     e.preventDefault();
@@ -52,6 +85,7 @@ const App: React.FC = () => {
             output: result.output,
           },
         ]);
+        purgeOldHistory();
       } else {
         console.log("Invalid result type.", result);
         throw new Error("Invalid result type.");
@@ -78,6 +112,7 @@ const App: React.FC = () => {
   };
 
   const handleKeyDown = (e: React.KeyboardEvent) => {
+    const inputElement = inputRef.current;
     if (e.key === "ArrowUp") {
       if (historyIndex === null) {
         setHistoryIndex(history.length - 1);
@@ -86,6 +121,7 @@ const App: React.FC = () => {
         setHistoryIndex(historyIndex - 1);
         setInput(history[historyIndex - 1]?.input || "");
       }
+      historyUpdated.current = true;
     } else if (e.key === "ArrowDown") {
       if (historyIndex !== null && historyIndex < history.length - 1) {
         setHistoryIndex(historyIndex + 1);
@@ -94,6 +130,7 @@ const App: React.FC = () => {
         setHistoryIndex(null);
         setInput("");
       }
+      historyUpdated.current = true;
     }
   };
 

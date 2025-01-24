@@ -2,8 +2,6 @@ import {
   parseInput,
   parseInputString,
   parseDuration,
-  calculateBitRate,
-  CalculationResult,
   parseBitRate,
   parseFileSize,
 } from "./lib";
